@@ -38,6 +38,7 @@ public class UserController {
 
     @GetMapping
     public Collection<User> getAllUsers() {
+        log.info("Запрос на получение всех пользователей");
         return users.values();
     }
 
