@@ -8,12 +8,12 @@ import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.HashSet;
 import java.util.Set;
 
 @Data
 public class Film {
     private Long id;
-    final private Set<Long> likes;
     @NotBlank(message = "Название не может быть пустым")
     private String name;
 
@@ -27,11 +27,13 @@ public class Film {
     @Positive(message = "Продолжительность фильма должна быть положительным числом")
     private int duration;
 
-    public void addLike(Long filmId) {
-        likes.add(filmId);
+    private final Set<Long> usersIdsLiked = new HashSet<>();
+
+    public void addLike(Long userId) {
+        usersIdsLiked.add(userId);
     }
 
-    public void remoteLike(Long userId) {
-        likes.remove(userId);
+    public void removeLike(Long userId) {
+        usersIdsLiked.remove(userId);
     }
 }

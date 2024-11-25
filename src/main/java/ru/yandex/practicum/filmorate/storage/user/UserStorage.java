@@ -1,22 +1,23 @@
 package ru.yandex.practicum.filmorate.storage.user;
 
+import lombok.SneakyThrows;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.Collection;
 
 public interface UserStorage {
 
-    void deleteAll();
+    long getSize();
+
+    User getById(Long id) throws UserNotFoundException;
 
     Collection<User> findAll();
 
-    User findById(Long id);
+    User create(User user);
 
-    User addUser(User user);
+    @SneakyThrows
+    void update(User user);
 
-    User updateUser(User user);
-
-    Collection<User> getUserFriends(Long id);
-
-    Collection<User> getUserCrossFriends(Long id, Long userId);
+    void deleteById(Long id);
 }

@@ -1,68 +1,70 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
-
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
 @RequestMapping("/films")
-@Validated
+@RequiredArgsConstructor
 public class FilmController {
+    private final FilmService filmService;
 
-    private final FilmService service;
-
-    @Autowired
-    public FilmController(FilmService service) {
-        this.service = service;
+    @GetMapping()
+    public Collection<Film> findAll() {
+        return filmService.findAll();
     }
 
-    @PutMapping("{id}/like/{userId}")
-    public void addLike(@PathVariable Long id, @PathVariable Long userId) {
-        service.addLike(id, userId);
-    }
-    @DeleteMapping("{id}/like/{userId}")
-    public void removeLike(@PathVariable Long id, @PathVariable Long userId) {
-        service.remoteLike(id, userId);
-    }
-    @GetMapping("/popular")
-    public Collection<Film> getPopular(@RequestParam(required = false, defaultValue = "10") Integer count ) {
-        return service.getMostPopular(count);
+    @GetMapping("/{id}")
+    public Film getFilm(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
+        return filmService.getById(id);
     }
 
-    @GetMapping("{id}")
-    public Film getFilm(@PathVariable Long id) {
-        return service.findById(id);
-    }
-
-    @PostMapping
-    public Film addFilm(@Valid @RequestBody Film film) {
-
-        service.addFilm(film);
-
+    @PostMapping()
+    public Film create(@Valid @RequestBody @NonNull Film film) throws ValidationException {
+        film = filmService.create(film);
+        log.info("film created with id = {}, number of films = {}", film.getId(), filmService.getSize());
         return film;
     }
 
     @PutMapping
-    public Film updateFilm(@Valid @RequestBody Film film) {
-        return service.updateFilm(film);
+    public Film update(@Valid @RequestBody @NonNull Film film) throws ValidationException {
+        filmService.update(film);
+        log.info("film with id {} updated", film.getId());
+        return film;
     }
 
-    @GetMapping
-    public Collection<Film> findAll() {
-        log.info("findAll");
-        return service.findAll();
+    @PutMapping("/{id}/like/{userId}")
+    public void addLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) throws UserNotFoundException, FilmNotFoundException {
+        filmService.likeFromUser(filmId, userId);
     }
 
+    @DeleteMapping("/{id}/like/{userId}")
+    public void deleteLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) throws UserNotFoundException, FilmNotFoundException {
+        filmService.unlikeFromUser(filmId, userId);
+    }
+
+    @GetMapping("/popular")
+    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") int count) {
+        return filmService.getCountTopIds(count).stream()
+                .map(id -> {
+                    try {
+                        return filmService.getById(id);
+                    } catch (UserNotFoundException | FilmNotFoundException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(Collectors.toList());
+    }
 }

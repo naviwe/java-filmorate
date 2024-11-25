@@ -1,75 +1,68 @@
-package ru.yandex.practicum.filmorate.service.user;
+package ru.yandex.practicum.filmorate.service;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.model.Friend;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class UserService {
-    private static Long currentMaxId = 0L;
-    private UserStorage storage;
-
-    @Autowired
-    public UserService(UserStorage storage) {
-        this.storage = storage;
-    }
-
+    private final UserStorage userStorage;
 
     public Collection<User> findAll() {
-        return storage.findAll();
+        return userStorage.findAll();
     }
 
-
-    public User findById(Long id) {
-        return storage.findById(id);
+    public User getById(Long id) throws UserNotFoundException, FilmNotFoundException {
+        return userStorage.getById(id);
     }
 
+    public long getSize() {
+        return userStorage.getSize();
+    }
 
-    public User createUser(User user) {
-        user.setId(currentMaxId++);
-        storage.addUser(user);
-
+    public User create(User user) {
+        user = userStorage.create(user);
         return user;
     }
 
-
-    public User updateUser(User user) {
-        return storage.updateUser(user);
+    public User update(User user) {
+        userStorage.update(user);
+        return user;
     }
 
-
-    public void addFriend(Long id, Long friendId) {
-        User userFriend = storage.findById(friendId);
-        Friend friend = new Friend(friendId);
-        if (!userFriend.getFriends().stream().findFirst().isEmpty()) {
-            friend.setCross(true);
-        } else {
-            friend.setCross(false);
-        }
-        storage.findById(id).addFriend(friend);
+    public void makeFriends(Long userId, Long friendToAddId) throws UserNotFoundException, FilmNotFoundException {
+        User user = userStorage.getById(userId);
+        User friend = userStorage.getById(friendToAddId);
+        user.addFriend(friendToAddId);
+        friend.addFriend(userId);
     }
 
-
-    public void removeFriend(Long id, Long userId) {
-        storage.findById(id).getFriends().remove(userId);
+    public void deleteFriend(Long userId, Long friendToDellId) throws UserNotFoundException, FilmNotFoundException {
+        User user = userStorage.getById(userId);
+        User friend = userStorage.getById(friendToDellId);
+        user.deleteFriend(friendToDellId);
+        friend.deleteFriend(userId);
     }
 
+    public Collection<Long> getMutualFriendsIds(Long user1Id, Long user2Id) throws UserNotFoundException {
+        User user1 = userStorage.getById(user1Id);
+        User user2 = userStorage.getById(user2Id);
 
-    public Collection<User> getFriends(Long id) {
-        return storage.getUserFriends(id);
+        Set<Long> user1Friends = user1.getFriends();
+        Set<Long> user2Friends = user2.getFriends();
+
+        return user1Friends.stream()
+                .filter(user2Friends::contains)
+                .collect(Collectors.toList());
     }
 
-
-    public Collection<User> getCrossFriends(Long id, Long userId) {
-        return storage.getUserCrossFriends(id, userId);
-    }
-
-
-    public void deleteAll() {
-        storage.deleteAll();
-    }
 }

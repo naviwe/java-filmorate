@@ -10,7 +10,6 @@ import java.util.Set;
 @Data
 public class User {
     private Long id;
-    private Set<Friend> friends = new HashSet<>();
 
 
     @NotBlank(message = "Электронная почта не может быть пустой")
@@ -27,11 +26,19 @@ public class User {
     @PastOrPresent(message = "Дата рождения не может быть в будущем")
     private LocalDate birthday;
 
+    private final Set<Long> friends = new HashSet<>();
+
+    public void addFriend(Long id) {
+        friends.add(id);
+    }
+
+    public void deleteFriend(Long id) {
+        friends.remove(id);
+    }
+
     public String getName() {
         return (name == null || name.isBlank()) ? login : name;
     }
 
-    public void addFriend(Friend friend) {
-        this.friends.add(friend);
-    }
 }
+

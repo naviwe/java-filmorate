@@ -1,5 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.film;
 
+import lombok.SneakyThrows;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 
 import java.util.Collection;
@@ -7,17 +9,17 @@ import java.util.List;
 
 public interface FilmStorage {
 
-    void deleteAll();
 
-    boolean containsKey(Long id);
+    long getSize();
+
+    Film getById(Long id) throws FilmNotFoundException;
 
     Collection<Film> findAll();
 
-    Film findById(Long id);
+    Film create(Film film);
 
-    Film addFilm(Film film);
+    @SneakyThrows
+    void update(Film film);
 
-    Film updateFilm(Film film);
-
-    List<Film> getMostPopular(Integer count);
+    void deleteById(Long id);
 }
