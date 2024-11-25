@@ -44,7 +44,8 @@ public class InMemoryUserStorage implements UserStorage {
     @SneakyThrows
     @Override
     public void update(User user) {
-        if (user.getId() <= 0 || !users.containsKey(user.getId())) throw new UserNotFoundException("Пользователь не найден");
+        if (user.getId() <= 0 || !users.containsKey(user.getId()))
+            throw new UserNotFoundException("Пользователь не найден");
         users.put(user.getId(), user);
     }
 
