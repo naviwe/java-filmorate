@@ -4,10 +4,14 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
 @Data
 public class User {
     private Long id;
+    private Set<Friend> friends = new HashSet<>();
+
 
     @NotBlank(message = "Электронная почта не может быть пустой")
     @Email(message = "Электронная почта должна содержать символ '@'")
@@ -25,5 +29,9 @@ public class User {
 
     public String getName() {
         return (name == null || name.isBlank()) ? login : name;
+    }
+
+    public void addFriend(Friend friend) {
+        this.friends.add(friend);
     }
 }
