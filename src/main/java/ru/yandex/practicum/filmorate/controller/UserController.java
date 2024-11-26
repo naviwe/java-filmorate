@@ -13,7 +13,6 @@ import ru.yandex.practicum.filmorate.service.user.UserService;
 
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
