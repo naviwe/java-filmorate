@@ -7,6 +7,7 @@ import org.springframework.lang.NonNull;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.user.UserService;
 
@@ -23,43 +24,31 @@ public class UserController {
 
     @GetMapping()
     public Collection<User> findAll() {
+        log.info("findAll() method called in UserController");
         return userService.findAll();
     }
 
     @GetMapping("/{id}")
     public User getUser(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
+        log.info("getUser() method called with id = {}", id);
         return userService.getById(id);
     }
 
     @GetMapping("/{id}/friends")
     public Collection<User> getUserFriends(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
-        return userService.getById(id).getFriends()
-                .stream()
-                .map(id1 -> {
-                    try {
-                        return userService.getById(id1);
-                    } catch (UserNotFoundException | FilmNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toList());
+        log.info("getUserFriends() method called for user with id = {}", id);
+        return userService.getUserFriends(id);
     }
 
     @GetMapping("/{id}/friends/common/{otherId}")
     public Collection<User> getMutualFriends(@PathVariable Long id, @PathVariable Long otherId) throws UserNotFoundException, FilmNotFoundException {
-        return userService.getMutualFriendsIds(id, otherId).stream()
-                .map(id1 -> {
-                    try {
-                        return userService.getById(id1);
-                    } catch (UserNotFoundException | FilmNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toList());
+        log.info("getMutualFriends() method called for users with ids {} and {}", id, otherId);
+        return userService.getMutualFriends(id, otherId);
     }
 
+
     @PostMapping()
-    public User create(@Valid @RequestBody @NonNull User user) {
+    public User create(@Valid @RequestBody @NonNull User user) throws ValidationException {
         user = userService.create(user);
         log.info("user created with id = {}, number of users = {}", user.getId(), userService.getSize());
         return user;
@@ -74,11 +63,13 @@ public class UserController {
 
     @PutMapping("/{id}/friends/{friendId}")
     public void makeFriends(@PathVariable Long id, @PathVariable Long friendId) throws UserNotFoundException, FilmNotFoundException {
+        log.info("makeFriends() method called for users with ids {} and {}", id, friendId);
         userService.makeFriends(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public void deleteFriendship(@PathVariable Long id, @PathVariable Long friendId) throws UserNotFoundException, FilmNotFoundException {
+        log.info("deleteFriend() method called for users with ids {} and {}", id, friendId);
         userService.deleteFriend(id, friendId);
     }
 }

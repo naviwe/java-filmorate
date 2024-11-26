@@ -12,7 +12,6 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Slf4j
 @RestController
@@ -23,12 +22,17 @@ public class FilmController {
 
     @GetMapping()
     public Collection<Film> findAll() {
+        log.info("findAll() method called to fetch all films");
         return filmService.findAll();
     }
 
     @GetMapping("/{id}")
-    public Film getFilm(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
-        return filmService.getById(id);
+    public Film getFilm(@PathVariable Long id) {
+        try {
+            return filmService.getById(id);
+        } catch (FilmNotFoundException | UserNotFoundException e) {
+            throw e;
+        }
     }
 
     @PostMapping()
@@ -46,25 +50,26 @@ public class FilmController {
     }
 
     @PutMapping("/{id}/like/{userId}")
-    public void addLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) throws UserNotFoundException, FilmNotFoundException {
-        filmService.likeFromUser(filmId, userId);
+    public void addLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
+        try {
+            filmService.likeFromUser(filmId, userId);
+        } catch (UserNotFoundException | FilmNotFoundException e) {
+            throw e;
+        }
     }
 
     @DeleteMapping("/{id}/like/{userId}")
-    public void deleteLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) throws UserNotFoundException, FilmNotFoundException {
-        filmService.unlikeFromUser(filmId, userId);
+    public void deleteLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
+        try {
+            filmService.unlikeFromUser(filmId, userId);
+        } catch (UserNotFoundException | FilmNotFoundException e) {
+            throw e;
+        }
     }
 
     @GetMapping("/popular")
     public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") int count) {
-        return filmService.getCountTopIds(count).stream()
-                .map(id -> {
-                    try {
-                        return filmService.getById(id);
-                    } catch (UserNotFoundException | FilmNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toList());
+        return filmService.getCountTopFilms(count);
     }
+
 }

@@ -39,8 +39,8 @@ public class FilmService {
 
     private void validateFilm(Film film) throws ValidationException {
         if (film.getReleaseDate().isBefore(CINEMA_BIRTHDATE)) {
-            log.warn("film validation fail");
-            throw new ValidationException("Фильм реализован до 28.12.1895");
+            log.warn("Film validation fail");
+            throw new ValidationException("The film was released before 28.12.1895");
         }
     }
 
@@ -51,19 +51,19 @@ public class FilmService {
     public Film update(Film film) throws ValidationException {
         validateFilm(film);
         filmStorage.update(film);
-        log.info("film with id {} updated", film.getId());
+        log.info("Film with id {} updated", film.getId());
         return film;
     }
 
     public void likeFromUser(Long filmId, Long userId) throws UserNotFoundException, FilmNotFoundException {
         Film filmExistant = filmStorage.getById(filmId);
-        User userExistant = userStorage.getById(userId);
+        userStorage.getById(userId);
         filmExistant.addLike(userId);
     }
 
     public void unlikeFromUser(Long filmId, Long userId) throws UserNotFoundException, FilmNotFoundException {
         Film filmExistant = filmStorage.getById(filmId);
-        User userExistant = userStorage.getById(userId);
+        userStorage.getById(userId);
         filmExistant.removeLike(userId);
     }
 
@@ -72,17 +72,16 @@ public class FilmService {
         return filmExistant.getUsersIdsLiked().size();
     }
 
-    public Collection<Long> getCountTopIds(int count) {
-        return filmStorage.findAll().stream()
-                .sorted((a, b) -> {
-                    try {
-                        return -getNumberOfLikes(a.getId()) + getNumberOfLikes(b.getId());
-                    } catch (UserNotFoundException | FilmNotFoundException e) {
-                        throw new RuntimeException(e);
-                    }
-                })
-                .limit(count)
-                .map(Film::getId)
-                .collect(Collectors.toList());
+    public Collection<Film> getCountTopFilms(int count) {
+        try {
+            return filmStorage.findAll().stream()
+                    .sorted((film1, film2) -> film2.getUsersIdsLiked().size() - film1.getUsersIdsLiked().size())
+                    .limit(count)
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            throw new FilmNotFoundException("Error while fetching top films: " + e.getMessage());
+        }
     }
+
+
 }

@@ -22,7 +22,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Film getById(Long id) throws FilmNotFoundException {
         Film film = films.get(id);
-        if (film == null) throw new FilmNotFoundException("Фильм не найден");
+        if (film == null) throw new FilmNotFoundException("Фильм с id " + id + " не найден");
         return film;
     }
 

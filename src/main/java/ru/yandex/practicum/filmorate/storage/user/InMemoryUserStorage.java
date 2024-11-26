@@ -22,7 +22,7 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public User getById(Long id) throws UserNotFoundException {
         User user = users.get(id);
-        if (user == null) throw new UserNotFoundException("Пользовартель не найден");
+        if (user == null) throw new UserNotFoundException("Пользовартель с id: " + id + " не найден");
         return users.get(id);
     }
 
@@ -33,11 +33,9 @@ public class InMemoryUserStorage implements UserStorage {
 
     @Override
     public User create(User user) {
-        System.out.println("debug1");
         user.setId(nextId);
         nextId++;
         users.put(user.getId(), user);
-        System.out.println("debug2");
         return user;
     }
 
@@ -45,7 +43,7 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public void update(User user) {
         if (user.getId() <= 0 || !users.containsKey(user.getId()))
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException("Пользователь с id: " + user.getId() + " не найден ");
         users.put(user.getId(), user);
     }
 
