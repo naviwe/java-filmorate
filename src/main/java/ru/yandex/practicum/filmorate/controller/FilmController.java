@@ -1,65 +1,75 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.Film;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
-
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.service.film.FilmService;
 
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Slf4j
 @RestController
 @RequestMapping("/films")
-@Validated
+@RequiredArgsConstructor
 public class FilmController {
-    private final Map<Long, Film> films = new HashMap<>();
-    private static final LocalDate EARLIEST_RELEASE_DATE = LocalDate.of(1895, 12, 28);
+    private final FilmService filmService;
 
-    @PostMapping
-    public Film addFilm(@Valid @RequestBody Film film) {
-        validateReleaseDate(film.getReleaseDate());
-        film.setId(getNextId());
-        films.put(film.getId(), film);
-        log.info("Добавлен новый фильм: {}", film);
+    @GetMapping()
+    public Collection<Film> findAll() {
+        log.info("findAll() method called to fetch all films");
+        return filmService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public Film getFilm(@PathVariable Long id) {
+        try {
+            return filmService.getById(id);
+        } catch (FilmNotFoundException | UserNotFoundException e) {
+            throw e;
+        }
+    }
+
+    @PostMapping()
+    public Film create(@Valid @RequestBody @NonNull Film film) throws ValidationException {
+        film = filmService.create(film);
+        log.info("film created with id = {}, number of films = {}", film.getId(), filmService.getSize());
         return film;
     }
 
     @PutMapping
-    public Film updateFilm(@Valid @RequestBody Film film) {
-        if (film.getId() == null || !films.containsKey(film.getId())) {
-            log.error("Фильм с id={} не найден", film.getId());
-            throw new IllegalArgumentException("Фильм с указанным id не найден.");
-        }
-        validateReleaseDate(film.getReleaseDate());
-        films.put(film.getId(), film);
-        log.info("Фильм с id={} обновлен: {}", film.getId(), film);
+    public Film update(@Valid @RequestBody @NonNull Film film) throws ValidationException {
+        filmService.update(film);
+        log.info("film with id {} updated", film.getId());
         return film;
     }
 
-    @GetMapping
-    public Collection<Film> getAllFilms() {
-        log.info("Запрос на получение всех фильмов");
-        return films.values();
-    }
-
-    private long getNextId() {
-        long currentMaxId = films.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
-    }
-
-    public void validateReleaseDate(LocalDate releaseDate) {
-        if (releaseDate != null && releaseDate.isBefore(EARLIEST_RELEASE_DATE)) {
-            throw new ValidationException("Дата релиза не может быть раньше 28 декабря 1895 года.");
+    @PutMapping("/{id}/like/{userId}")
+    public void addLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
+        try {
+            filmService.likeFromUser(filmId, userId);
+        } catch (UserNotFoundException | FilmNotFoundException e) {
+            throw e;
         }
     }
+
+    @DeleteMapping("/{id}/like/{userId}")
+    public void deleteLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
+        try {
+            filmService.unlikeFromUser(filmId, userId);
+        } catch (UserNotFoundException | FilmNotFoundException e) {
+            throw e;
+        }
+    }
+
+    @GetMapping("/popular")
+    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") int count) {
+        return filmService.getCountTopFilms(count);
+    }
+
 }

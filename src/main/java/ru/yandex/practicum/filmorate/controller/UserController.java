@@ -1,53 +1,74 @@
 package ru.yandex.practicum.filmorate.controller;
 
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.User;
-
 import jakarta.validation.Valid;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.lang.NonNull;
+import org.springframework.web.bind.annotation.*;
+import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.service.user.UserService;
+
+
+import java.util.*;
 
 @Slf4j
 @RestController
 @RequestMapping("/users")
-@Validated
+@RequiredArgsConstructor
 public class UserController {
-    private final Map<Long, User> users = new HashMap<>();
+    private final UserService userService;
 
-    @PostMapping
-    public User createUser(@Valid @RequestBody User user) {
-        user.setId(getNextId());
-        users.put(user.getId(), user);
-        log.info("Создан новый пользователь: {}", user);
+    @GetMapping()
+    public Collection<User> findAll() {
+        log.info("findAll() method called in UserController");
+        return userService.findAll();
+    }
+
+    @GetMapping("/{id}")
+    public User getUser(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
+        log.info("getUser() method called with id = {}", id);
+        return userService.getById(id);
+    }
+
+    @GetMapping("/{id}/friends")
+    public Collection<User> getUserFriends(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
+        log.info("getUserFriends() method called for user with id = {}", id);
+        return userService.getUserFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public Collection<User> getMutualFriends(@PathVariable Long id, @PathVariable Long otherId) throws UserNotFoundException, FilmNotFoundException {
+        log.info("getMutualFriends() method called for users with ids {} and {}", id, otherId);
+        return userService.getMutualFriends(id, otherId);
+    }
+
+
+    @PostMapping()
+    public User create(@Valid @RequestBody @NonNull User user) throws ValidationException {
+        user = userService.create(user);
+        log.info("user created with id = {}, number of users = {}", user.getId(), userService.getSize());
         return user;
     }
 
     @PutMapping
-    public User updateUser(@Valid @RequestBody User user) {
-        if (user.getId() == null || !users.containsKey(user.getId())) {
-            log.error("Пользователь с id={} не найден", user.getId());
-            throw new IllegalArgumentException("Пользователь с указанным id не найден.");
-        }
-        users.put(user.getId(), user);
-        log.info("Пользователь с id={} обновлен: {}", user.getId(), user);
+    public User update(@Valid @RequestBody @NonNull User user) {
+        userService.update(user);
+        log.info("user with id = {} updated or created", user.getId());
         return user;
     }
 
-    @GetMapping
-    public Collection<User> getAllUsers() {
-        log.info("Запрос на получение всех пользователей");
-        return users.values();
+    @PutMapping("/{id}/friends/{friendId}")
+    public void makeFriends(@PathVariable Long id, @PathVariable Long friendId) throws UserNotFoundException, FilmNotFoundException {
+        log.info("makeFriends() method called for users with ids {} and {}", id, friendId);
+        userService.makeFriends(id, friendId);
     }
 
-    private long getNextId() {
-        long currentMaxId = users.keySet()
-                .stream()
-                .mapToLong(id -> id)
-                .max()
-                .orElse(0);
-        return ++currentMaxId;
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public void deleteFriendship(@PathVariable Long id, @PathVariable Long friendId) throws UserNotFoundException, FilmNotFoundException {
+        log.info("deleteFriend() method called for users with ids {} and {}", id, friendId);
+        userService.deleteFriend(id, friendId);
     }
 }
