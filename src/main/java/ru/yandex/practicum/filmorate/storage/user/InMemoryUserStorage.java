@@ -6,7 +6,9 @@ import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -51,4 +53,54 @@ public class InMemoryUserStorage implements UserStorage {
     public void deleteById(Long id) {
         users.remove(id);
     }
+
+    @Override
+    public void addFriend(Long userId, Long friendId) {
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+
+        if (user != null && friend != null) {
+            user.addFriend(friendId);
+            friend.addFriend(userId);
+        }
+    }
+
+
+    @Override
+    public void deleteFriend(Long userId, Long friendId) {
+        User user = users.get(userId);
+        User friend = users.get(friendId);
+
+        if (user != null && friend != null) {
+            user.deleteFriend(friendId);
+            friend.deleteFriend(userId);
+        }
+    }
+
+
+    @Override
+    public Set<Long> getUserFriends(Long userId) {
+        User user = users.get(userId);
+        if (user != null) {
+            return user.getFriends();
+        }
+        return Collections.emptySet();
+    }
+
+
+    @Override
+    public Collection<Long> getMutualFriends(Long userId1, Long userId2) {
+        User user1 = users.get(userId1);
+        User user2 = users.get(userId2);
+
+        if (user1 != null && user2 != null) {
+            Set<Long> user1Friends = user1.getFriends();
+            Set<Long> user2Friends = user2.getFriends();
+
+            user1Friends.retainAll(user2Friends);
+            return user1Friends;
+        }
+        return Collections.emptySet();
+    }
+
 }
