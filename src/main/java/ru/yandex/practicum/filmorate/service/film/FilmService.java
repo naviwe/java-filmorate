@@ -56,13 +56,13 @@ public class FilmService {
 
     public void likeFromUser(Long filmId, Long userId) throws UserNotFoundException, FilmNotFoundException {
         Film filmExistant = filmStorage.getById(filmId);
-        userStorage.getById(userId);
+        userStorage.getUserById(userId);
         filmExistant.addLike(userId);
     }
 
     public void unlikeFromUser(Long filmId, Long userId) throws UserNotFoundException, FilmNotFoundException {
         Film filmExistant = filmStorage.getById(filmId);
-        userStorage.getById(userId);
+        userStorage.getUserById(userId);
         filmExistant.removeLike(userId);
     }
 

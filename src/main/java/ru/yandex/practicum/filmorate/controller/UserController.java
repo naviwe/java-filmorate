@@ -30,7 +30,7 @@ public class UserController {
     @GetMapping("/{id}")
     public User getUser(@PathVariable Long id) throws UserNotFoundException, FilmNotFoundException {
         log.info("getUser() method called with id = {}", id);
-        return userService.getById(id);
+        return userService.getUserById(id);
     }
 
     @GetMapping("/{id}/friends")
@@ -42,20 +42,20 @@ public class UserController {
     @GetMapping("/{id}/friends/common/{otherId}")
     public Collection<User> getMutualFriends(@PathVariable Long id, @PathVariable Long otherId) throws UserNotFoundException, FilmNotFoundException {
         log.info("getMutualFriends() method called for users with ids {} and {}", id, otherId);
-        return userService.getMutualFriends(id, otherId);
+        return userService.getCommonFriends(id, otherId);
     }
 
 
     @PostMapping()
     public User create(@Valid @RequestBody @NonNull User user) throws ValidationException {
-        user = userService.create(user);
+        userService.createUser(user);
         log.info("user created with id = {}, number of users = {}", user.getId(), userService.getSize());
         return user;
     }
 
     @PutMapping
     public User update(@Valid @RequestBody @NonNull User user) {
-        userService.update(user);
+        userService.updateUser(user);
         log.info("user with id = {} updated or created", user.getId());
         return user;
     }
@@ -63,7 +63,7 @@ public class UserController {
     @PutMapping("/{id}/friends/{friendId}")
     public void makeFriends(@PathVariable Long id, @PathVariable Long friendId) throws UserNotFoundException, FilmNotFoundException {
         log.info("makeFriends() method called for users with ids {} and {}", id, friendId);
-        userService.makeFriends(id, friendId);
+        userService.addFriend(id, friendId);
     }
 
     @DeleteMapping("/{id}/friends/{friendId}")

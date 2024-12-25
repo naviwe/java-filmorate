@@ -5,15 +5,15 @@ import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
 import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 public interface UserStorage {
 
     long getSize();
 
-    User getById(Long id) throws UserNotFoundException;
-
-    Collection<User> findAll();
+    User getUserById(Long id) throws UserNotFoundException;
 
     User create(User user);
 
@@ -22,12 +22,12 @@ public interface UserStorage {
 
     void deleteById(Long id);
 
-    void addFriend(Long userId, Long friendId);
+    List<User> getUsersList();
 
-    void deleteFriend(Long userId, Long friendId);
+    Map<Long, User> getUsersMap();
 
-    Set<Long> getUserFriends(Long userId);
+    List<User> getUserFriends(Long userId);
 
-    Collection<Long> getMutualFriends(Long userId1, Long userId2);
+    List<User> getCommonFriends(Long userId1, Long userId2);
 
 }

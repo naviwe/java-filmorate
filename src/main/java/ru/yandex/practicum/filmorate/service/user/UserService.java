@@ -1,93 +1,64 @@
 package ru.yandex.practicum.filmorate.service.user;
 
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.user.UserStorage;
+import ru.yandex.practicum.filmorate.storage.user.friends.UserFriends;
 
 import java.util.Collection;
-import java.util.Set;
-import java.util.stream.Collectors;
+import java.util.List;
+
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class UserService {
+
     private final UserStorage userStorage;
+    private final UserFriends userFriendsStorage;
 
     public Collection<User> findAll() {
-        return userStorage.findAll();
+        return userStorage.getUsersList();
     }
-
-    public User getById(Long id) throws UserNotFoundException {
-        return userStorage.getById(id);
-    }
-
 
     public long getSize() {
         return userStorage.getSize();
     }
 
-    public User create(User user) {
-        user = userStorage.create(user);
-        return user;
+    public void createUser(User user) {
+        userStorage.create(user);
     }
 
-    public User update(User user) {
+    public void updateUser(User user) {
         userStorage.update(user);
-        return user;
     }
 
-    public void makeFriends(Long userId, Long friendToAddId) throws UserNotFoundException {
-        userStorage.addFriend(userId, friendToAddId);
-        userStorage.addFriend(friendToAddId, userId);
+    public void deleteUser(User user) {
+        userStorage.deleteById(user.getId());
     }
 
-
-    public void deleteFriend(Long userId, Long friendToDellId) throws UserNotFoundException {
-        userStorage.deleteFriend(userId, friendToDellId);
-        userStorage.deleteFriend(friendToDellId, userId);
+    public User getUserById(long id) {
+        return userStorage.getUserById(id);
     }
 
-
-    public Collection<User> getMutualFriends(Long userId1, Long userId2) throws UserNotFoundException {
-        Collection<Long> mutualFriendsIds = userStorage.getMutualFriends(userId1, userId2);
-
-        log.info("Found {} mutual friends between user with id {} and user with id {}",
-                mutualFriendsIds.size(), userId1, userId2);
-
-        return mutualFriendsIds.stream()
-                .map(friendId -> {
-                    try {
-                        return getById(friendId);
-                    } catch (UserNotFoundException e) {
-                        log.error("User with id {} not found while retrieving mutual friend", friendId);
-                        return null;
-                    }
-                })
-                .filter(user -> user != null)
-                .collect(Collectors.toList());
+    public List<User> getUsersInList() {
+        return userStorage.getUsersList();
     }
 
+    public void addFriend(long id, long friendId) {
+        userFriendsStorage.addFriend(id, friendId);
+    }
 
-    public Collection<User> getUserFriends(Long userId) throws UserNotFoundException {
-        Set<Long> friendsIds = userStorage.getUserFriends(userId);
+    public void deleteFriend(long id, long friendId) {
+        userFriendsStorage.deleteFriend(id, friendId);
+    }
 
-        log.info("User with id = {} has {} friends", userId, friendsIds.size());
+    public List<User> getUserFriends(long id) {
+        return userStorage.getUserFriends(id);
+    }
 
-        return friendsIds.stream()
-                .map(friendId -> {
-                    try {
-                        return getById(friendId);
-                    } catch (UserNotFoundException e) {
-                        log.error("Error occurred while retrieving friend with id = {}: {}", friendId, e.getMessage());
-                        throw new RuntimeException(e);
-                    }
-                })
-                .collect(Collectors.toList());
+    public List<User> getCommonFriends(long id, long otherId) {
+        return userStorage.getCommonFriends(id, otherId);
     }
 
 }

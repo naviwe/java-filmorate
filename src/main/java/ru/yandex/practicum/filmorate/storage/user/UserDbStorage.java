@@ -21,28 +21,23 @@ public class UserDbStorage implements UserStorage {
 
     private final JdbcTemplate jdbcTemplate;
 
+
     @Override
     public long getSize() {
         String sql = "SELECT COUNT(*) FROM USERS";
         return jdbcTemplate.queryForObject(sql, Long.class);
     }
 
+
     @Override
-    public User getById(Long id) throws UserNotFoundException {
+    public User getUserById(Long id) throws UserNotFoundException {
         String sql = "SELECT u.USER_ID, u.USER_NAME , u.EMAIL, u.LOGIN, u.BIRTHDAY FROM USERS u WHERE u.USER_ID = ?";
         return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> makeUser(rs, sql), id);
     }
 
     @Override
-    public Collection<User> findAll() {
-        String sql = "SELECT u.USER_ID, u.USER_NAME , u.EMAIL, u.LOGIN, u.BIRTHDAY, STRING_AGG(uf.FRIEND_ID, ',')" +
-                " AS friends FROM USERS u LEFT JOIN USER_FRIENDS AS uf ON u.user_id = uf.user_id GROUP BY u.user_id;";
-        return new ArrayList<>(jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs, sql)));
-    }
-
-    @Override
     public User create(User user) {
-        String sql = "INSERT INTO USERS (USER_NAME, EMAIL, LOGIN, BIRTHDAY) VALUES (?, ?, ?, ?);";
+        String sql = "INSERT INTO USERS (USER_NAME, EMAIL, LOGIN, BIRTHDAY) VALUES (?, ?, ?, ?)";
         jdbcTemplate.update(sql, user.getName(), user.getEmail(), user.getLogin(), user.getBirthday());
 
         long id = jdbcTemplate.queryForObject("SELECT USER_ID FROM USERS ORDER BY USER_ID DESC LIMIT 1", Long.class);
@@ -55,67 +50,59 @@ public class UserDbStorage implements UserStorage {
         }
 
         return user;
-
     }
 
 
     @Override
     public void update(User user) {
-        String sql = "SELECT COUNT(*) FROM USERS WHERE USER_ID = ?";
-        long count = jdbcTemplate.queryForObject(sql, Long.class, user.getId());
+        String checkSql = "SELECT COUNT(*) FROM USERS WHERE USER_ID = ?";
+        Integer count = jdbcTemplate.queryForObject(checkSql, Integer.class, user.getId());
 
-        if (count == 0) {
-            throw new UserNotFoundException("User with id " + user.getId() + " not found");
+        if (count == null || count == 0) {
+            throw new UserNotFoundException("Пользователь с ID " + user.getId() + " не найден");
         }
 
-        jdbcTemplate.update("UPDATE USERS SET USER_NAME = ?, EMAIL = ?, LOGIN = ?, BIRTHDAY = ? WHERE USER_ID = ?;",
-                user.getName(), user.getEmail(), user.getLogin(), user.getBirthday(), user.getId());
+        String updateSql = "UPDATE USERS SET USER_NAME = ?, EMAIL = ?, LOGIN = ?, BIRTHDAY = ? WHERE USER_ID = ?";
+        jdbcTemplate.update(updateSql, user.getName(), user.getEmail(), user.getLogin(), user.getBirthday(), user.getId());
     }
 
 
     @Override
     public void deleteById(Long id) {
-        jdbcTemplate.update("DELETE FROM USER_FRIENDS WHERE USER_ID = ?;", id);
-        jdbcTemplate.update("DELETE FROM USERS WHERE USER_ID = ?;", id);
+        jdbcTemplate.update("DELETE FROM USERS WHERE user_id =?;", id);
+        jdbcTemplate.update("DELETE FROM USERS WHERE user_id =?;", id);
     }
 
     @Override
-    public void addFriend(Long userId, Long friendToAddId) throws UserNotFoundException {
-        getById(userId);
-        getById(friendToAddId);
-
-        String sql = "INSERT INTO USER_FRIENDS (USER_ID, FRIEND_ID) VALUES (?, ?)";
-        jdbcTemplate.update(sql, userId, friendToAddId);
-        jdbcTemplate.update(sql, friendToAddId, userId);
+    public List<User> getUsersList() {
+        String sql = "SELECT u.USER_ID, u.USER_NAME , u.EMAIL, u.LOGIN, u.BIRTHDAY, STRING_AGG(uf.FRIEND_ID, ',')" +
+                " AS friends FROM USERS u LEFT JOIN USER_FRIENDS AS uf ON u.user_id = uf.user_id GROUP BY u.user_id;";
+        return new ArrayList<>(jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs, sql)));
     }
 
     @Override
-    public void deleteFriend(Long userId, Long friendToDeleteId) throws UserNotFoundException {
-        getById(userId);
-        getById(friendToDeleteId);
-
-        String sql = "DELETE FROM USER_FRIENDS WHERE USER_ID = ? AND FRIEND_ID = ?";
-        jdbcTemplate.update(sql, userId, friendToDeleteId);
-        jdbcTemplate.update(sql, friendToDeleteId, userId);
+    public Map<Long, User> getUsersMap() {
+        return getUsersList().stream().collect(Collectors.toMap(User::getId, user -> user));
     }
 
     @Override
-    public Set<Long> getUserFriends(Long userId) throws UserNotFoundException {
-        getById(userId);
-
-        String sql = "SELECT FRIEND_ID FROM USER_FRIENDS WHERE USER_ID = ?";
-        return new HashSet<>(jdbcTemplate.queryForList(sql, Long.class, userId));
+    public List<User> getUserFriends(Long userId) {
+        validateUserExists(userId);
+        String sql = "SELECT u.USER_ID, u.USER_NAME, u.EMAIL, u.LOGIN, u.BIRTHDAY FROM USERS u " +
+                "WHERE u.USER_ID IN (SELECT uf.FRIEND_ID FROM USER_FRIENDS uf WHERE uf.user_id = ?);";
+        return new ArrayList<>(jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs, sql), userId));
     }
-
 
     @Override
-    public Collection<Long> getMutualFriends(Long userId1, Long userId2) throws UserNotFoundException {
-        String sql = "SELECT uf.FRIEND_ID " +
-                "FROM USER_FRIENDS uf " +
-                "WHERE uf.USER_ID = ? " +
-                "AND uf.FRIEND_ID IN (SELECT FRIEND_ID FROM USER_FRIENDS WHERE USER_ID = ?)";
-        return jdbcTemplate.queryForList(sql, Long.class, userId1, userId2);
+    public List<User> getCommonFriends(Long userId1, Long userId2) {
+        String sql = " SELECT u.USER_ID, u.USER_NAME , u.EMAIL, u.LOGIN, u.BIRTHDAY FROM USERS u " +
+                "WHERE u.USER_ID IN (SELECT uf.FRIEND_ID FROM USER_FRIENDS uf " +
+                "GROUP BY uf.FRIEND_ID " +
+                "HAVING STRING_AGG(uf.USER_ID , '') LIKE ? AND STRING_AGG(uf.USER_ID , '') LIKE ? ); ";
+        return new ArrayList<>(jdbcTemplate.query(sql, (rs, rowNum) -> makeUser(rs, sql),
+                "%" + userId1 + "%", "%" + userId2 + "%"));
     }
+
 
     private User makeUser(ResultSet rs, String sql) throws SQLException {
         Set<Long> friends = new HashSet<>();
@@ -136,4 +123,14 @@ public class UserDbStorage implements UserStorage {
                 .friends(friends)
                 .build();
     }
+
+    private void validateUserExists(Long userId) {
+        String sql = "SELECT COUNT(*) FROM USERS WHERE USER_ID = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userId);
+
+        if (count == null || count == 0) {
+            throw new UserNotFoundException("Пользователь с ID " + userId + " не найден.");
+        }
+    }
+
 }

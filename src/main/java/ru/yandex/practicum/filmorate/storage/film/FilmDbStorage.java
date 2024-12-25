@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.storage.film;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
@@ -35,15 +36,21 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film getById(Long id) throws FilmNotFoundException {
-        String sql = "SELECT f.FILM_ID, FILM_NAME,DESCRIPTION,RELEASE_DATE, DURATION,fr.RATING , fr.RATING_ID, " +
+        String sql = "SELECT f.FILM_ID, FILM_NAME, DESCRIPTION, RELEASE_DATE, DURATION, fr.RATING, fr.RATING_ID, " +
                 "STRING_AGG(DISTINCT gi.GENRE_ID || '-' || gi.GENRE_NAME, ',') AS genre " +
-                "FROM FILMS  AS f " +
+                "FROM FILMS AS f " +
                 "LEFT JOIN FILM_RATING fr ON f.RATING_ID = fr.RATING_ID " +
                 "LEFT JOIN FILM_GENRES fg ON f.FILM_ID = fg.FILM_ID " +
                 "LEFT JOIN GENRE_INFO gi ON fg.GENRE_ID = gi.GENRE_ID " +
-                "WHERE f.FILM_ID = ? ;";
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> makeFilm(rs, sql), id);
+                "WHERE f.FILM_ID = ? " +
+                "GROUP BY f.FILM_ID, fr.RATING_ID, fr.RATING;";
+        try {
+            return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> makeFilm(rs, sql), id);
+        } catch (EmptyResultDataAccessException e) {
+            throw new FilmNotFoundException("Фильм с ID " + id + " не найден");
+        }
     }
+
 
     @Override
     public Collection<Film> findAll() {
@@ -77,20 +84,17 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public void update(Film film) {
-        String sqlCheck = "SELECT COUNT(*) FROM FILMS WHERE FILM_ID = ?";
-        long count = jdbcTemplate.queryForObject(sqlCheck, Long.class, film.getId());
-        if (count == 0) {
-            throw new FilmNotFoundException("Film with id " + film.getId() + " not found");
-        }
-
         jdbcTemplate.update("UPDATE FILMS SET FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, " +
-                        "RATING_ID  = ? WHERE FILM_ID = ?;", film.getName(), film.getDescription(), film.getReleaseDate(),
-                film.getDuration(), film.getMpa().getId(), film.getId());
+                        "RATING_ID = ? WHERE FILM_ID = ?",
+                film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
+                film.getMpa().getId(), film.getId());
 
-        jdbcTemplate.update("DELETE FROM FILM_GENRES WHERE FILM_ID  = ?;", film.getId());
+        jdbcTemplate.update("DELETE FROM FILM_GENRES WHERE FILM_ID = ?", film.getId());
+
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (Genre genre : film.getGenres()) {
-                jdbcTemplate.update("INSERT INTO FILM_GENRES (FILM_ID, GENRE_ID) VALUES (?, ?);", film.getId(), genre.getId());
+                jdbcTemplate.update("INSERT INTO FILM_GENRES (FILM_ID, GENRE_ID) VALUES (?, ?)",
+                        film.getId(), genre.getId());
             }
         }
     }
@@ -104,23 +108,27 @@ public class FilmDbStorage implements FilmStorage {
     }
 
     private Film makeFilm(ResultSet rs, String sql) throws SQLException {
-        Optional<Array> genres = Optional.ofNullable(rs.getArray("genre"));
-        Set<Long> setLikes = new HashSet<>();
+        LinkedHashSet<Genre> genres = new LinkedHashSet<>();
+        String genreString = rs.getString("genre");
+        if (genreString != null && !genreString.isEmpty()) {
+            genres = Arrays.stream(genreString.split(","))
+                    .map(genre -> {
+                        String[] parts = genre.split("-");
+                        return new Genre(Integer.parseInt(parts[0]), parts[1]);
+                    })
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+
+        Set<Long> likes = new HashSet<>();
         if (sql.contains("user_likes")) {
-            Optional<Array> userLikes = Optional.ofNullable(rs.getArray("user_likes"));
-            if (userLikes.isPresent()) {
-                setLikes = Arrays.stream((Object[]) userLikes.get().getArray()).map(Object::toString)
-                        .flatMap(Pattern.compile(",")::splitAsStream).map(Long::valueOf)
+            String likesString = rs.getString("user_likes");
+            if (likesString != null && !likesString.isEmpty()) {
+                likes = Arrays.stream(likesString.split(","))
+                        .map(Long::valueOf)
                         .collect(Collectors.toSet());
             }
         }
-        LinkedHashSet<Genre> listOfGenres = new LinkedHashSet<>();
-        if (genres.isPresent()) {
-            listOfGenres = Arrays.stream((Object[]) genres.get().getArray())
-                    .map(Object::toString).flatMap(Pattern.compile(",")::splitAsStream).map(x ->
-                            new Genre(Integer.parseInt(x.split("-")[0]), x.split("-")[1]))
-                    .collect(Collectors.toCollection(LinkedHashSet::new));
-        }
+
         return Film.builder()
                 .id(rs.getLong("film_id"))
                 .name(rs.getString("film_name"))
@@ -128,8 +136,9 @@ public class FilmDbStorage implements FilmStorage {
                 .releaseDate(rs.getDate("release_date").toLocalDate())
                 .duration(rs.getInt("duration"))
                 .mpa(new Mpa(rs.getInt("rating_id"), rs.getString("rating")))
-                .genres(listOfGenres)
-                .likes(setLikes)
+                .genres(genres)
+                .likes(likes)
                 .build();
     }
+
 }
