@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.service.film;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Mpa;
 import ru.yandex.practicum.filmorate.storage.mpa.MpaStorage;
 
@@ -23,6 +24,6 @@ public class MpaService {
     public Mpa getMpaById(int id) {
         if (mpaStorage.getAllMpa().stream().collect(Collectors.toMap(Mpa::getId, m -> m)).containsKey(id)) {
             return mpaStorage.getMpaById(id);
-        } else throw new NullPointerException("Object not found");
+        } else throw new NotFoundException("MPA с ID " + id + " не найден.");
     }
 }

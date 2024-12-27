@@ -12,6 +12,7 @@ import ru.yandex.practicum.filmorate.storage.user.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,9 +27,14 @@ public class FilmService {
         return filmStorage.findAll();
     }
 
-    public Film getById(Long id) throws UserNotFoundException, FilmNotFoundException {
-        return filmStorage.getById(id);
+    public Film getById(Long id) {
+        Film film = filmStorage.getById(id);
+        if (film == null) {
+            throw new FilmNotFoundException("Film with id " + id + " not found");
+        }
+        return film;
     }
+
 
     public Film create(Film film) throws ValidationException {
         validateFilm(film);
@@ -72,15 +78,26 @@ public class FilmService {
     }
 
     public Collection<Film> getCountTopFilms(int count) {
-        try {
-            return filmStorage.findAll().stream()
-                    .sorted((film1, film2) -> film2.getUsersIdsLiked().size() - film1.getUsersIdsLiked().size())
-                    .limit(count)
-                    .collect(Collectors.toList());
-        } catch (Exception e) {
-            throw new FilmNotFoundException("Error while fetching top films: " + e.getMessage());
+        if (count <= 0) {
+            throw new ValidationException("Count must be greater than 0");
         }
+
+        List<Film> allFilms = filmStorage.findAll().stream()
+                .sorted((film1, film2) -> Integer.compare(film2.getLikes().size(), film1.getLikes().size()))
+                .limit(count)
+                .collect(Collectors.toList());
+
+        if (allFilms.isEmpty()) {
+            log.info("No popular films found.");
+        }
+
+        return allFilms;
     }
+
+
+
+
+
 
 
 }

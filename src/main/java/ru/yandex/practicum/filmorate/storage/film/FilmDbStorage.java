@@ -7,15 +7,15 @@ import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
+import ru.yandex.practicum.filmorate.exception.GenreCreationException;
+import ru.yandex.practicum.filmorate.exception.MpaCreationException;
 import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.model.film.Genre;
 import ru.yandex.practicum.filmorate.model.film.Mpa;
 
-import java.sql.Array;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Primary
@@ -47,7 +47,8 @@ public class FilmDbStorage implements FilmStorage {
         try {
             return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> makeFilm(rs, sql), id);
         } catch (EmptyResultDataAccessException e) {
-            throw new FilmNotFoundException("Фильм с ID " + id + " не найден");
+            log.warn("Film with ID {} not found", id);
+            throw new FilmNotFoundException("Фильм с ID " + id + " не найден.");
         }
     }
 
@@ -66,10 +67,22 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film create(Film film) {
+        if (film.getMpa() == null || !mpaExists(film.getMpa().getId())) {
+            throw new MpaCreationException("Указан некорректный MPA.");
+        }
+
+        if (film.getGenres() != null) {
+            for (Genre genre : film.getGenres()) {
+                if (!genreExists(genre.getId())) {
+                    throw new GenreCreationException("Жанр с ID " + genre.getId() + " не существует.");
+                }
+            }
+        }
+
         String sql = "INSERT INTO FILMS (FILM_NAME, DESCRIPTION, RELEASE_DATE, DURATION, RATING_ID) VALUES (?, ?, ?, ?, ?)";
         jdbcTemplate.update(sql, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(), film.getMpa().getId());
 
-        long filmId = jdbcTemplate.queryForObject("SELECT FILM_ID FROM FILMS ORDER BY FILM_ID DESC LIMIT 1", Integer.class);
+        long filmId = jdbcTemplate.queryForObject("SELECT FILM_ID FROM FILMS ORDER BY FILM_ID DESC LIMIT 1", Long.class);
         film.setId(filmId);
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
@@ -78,25 +91,42 @@ public class FilmDbStorage implements FilmStorage {
             }
         }
 
+        log.info("Film created: {}", film);
         return film;
+    }
+
+    private boolean mpaExists(int mpaId) {
+        String sql = "SELECT COUNT(*) FROM FILM_RATING WHERE RATING_ID = ?";
+        return jdbcTemplate.queryForObject(sql, Integer.class, mpaId) > 0;
+    }
+
+    private boolean genreExists(int genreId) {
+        String sql = "SELECT COUNT(*) FROM GENRE_INFO WHERE GENRE_ID = ?";
+        return jdbcTemplate.queryForObject(sql, Integer.class, genreId) > 0;
     }
 
 
     @Override
     public void update(Film film) {
-        jdbcTemplate.update("UPDATE FILMS SET FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, " +
+        int rowsUpdated = jdbcTemplate.update("UPDATE FILMS SET FILM_NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, DURATION = ?, " +
                         "RATING_ID = ? WHERE FILM_ID = ?",
                 film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration(),
                 film.getMpa().getId(), film.getId());
+
+        if (rowsUpdated == 0) {
+            log.warn("Film with ID {} not found for update", film.getId());
+            throw new FilmNotFoundException("Фильм с ID " + film.getId() + " не найден для обновления.");
+        }
 
         jdbcTemplate.update("DELETE FROM FILM_GENRES WHERE FILM_ID = ?", film.getId());
 
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (Genre genre : film.getGenres()) {
-                jdbcTemplate.update("INSERT INTO FILM_GENRES (FILM_ID, GENRE_ID) VALUES (?, ?)",
-                        film.getId(), genre.getId());
+                jdbcTemplate.update("INSERT INTO FILM_GENRES (FILM_ID, GENRE_ID) VALUES (?, ?)", film.getId(), genre.getId());
             }
         }
+
+        log.info("Film updated: {}", film);
     }
 
 
