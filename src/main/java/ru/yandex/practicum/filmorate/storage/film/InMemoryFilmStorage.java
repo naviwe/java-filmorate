@@ -7,12 +7,11 @@ import ru.yandex.practicum.filmorate.model.film.Film;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.stream.Collectors;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Long, Film> films = new ConcurrentHashMap<>();
-    private final Map<Long, Set<Long>> filmLikes = new ConcurrentHashMap<>(); // Хранение лайков: ключ - ID фильма, значение - множество ID пользователей
+    private final Map<Long, Set<Long>> filmLikes = new ConcurrentHashMap<>();
     private static long nextId = 1L;
 
     @Override
@@ -37,7 +36,7 @@ public class InMemoryFilmStorage implements FilmStorage {
         film.setId(nextId);
         nextId++;
         films.put(film.getId(), film);
-        filmLikes.put(film.getId(), new HashSet<>()); // Инициализация пустого множества лайков для нового фильма
+        filmLikes.put(film.getId(), new HashSet<>());
         return film;
     }
 

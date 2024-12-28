@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
-import ru.yandex.practicum.filmorate.exception.GenreCreationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.film.Genre;
 
@@ -37,7 +36,6 @@ public class GenresDbStorage implements GenresStorage {
             throw new NotFoundException("Жанр с ID " + id + " не найден.");
         }
     }
-
 
 
     private Genre makeGenre(ResultSet rs) throws SQLException {
