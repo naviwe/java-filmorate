@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -60,10 +61,7 @@ public class FilmController {
     }
 
     @GetMapping("/popular")
-    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") int count) {
-        if (count <= 0) {
-            throw new ValidationException("Count must be greater than 0");
-        }
+    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") @Min(1) int count) {
         log.info("Fetching top {} popular films", count);
         return filmService.getCountTopFilms(count);
     }
