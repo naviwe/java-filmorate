@@ -29,9 +29,6 @@ public class FilmService {
 
     public Film getById(Long id) {
         Film film = filmStorage.getById(id);
-        if (film == null) {
-            throw new FilmNotFoundException("Film with id " + id + " not found");
-        }
         return film;
     }
 

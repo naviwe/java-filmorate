@@ -24,11 +24,17 @@ public class MpaController {
 
     @GetMapping
     public List<Mpa> getAllMpa() {
-        return mpaService.getAllMpa();
+        log.info("Request received: GET /mpa");
+        List<Mpa> mpaList = mpaService.getAllMpa();
+        log.info("Response: {} MPA ratings found", mpaList.size());
+        return mpaList;
     }
 
     @GetMapping("/{id}")
     public Mpa getMpaById(@Valid @PathVariable long id) throws NotFoundException {
-        return mpaService.getMpaById((int) id);
+        log.info("Request received: GET /mpa/{}", id);
+        Mpa mpa = mpaService.getMpaById((int) id);
+        log.info("Response: MPA rating found - {}", mpa);
+        return mpa;
     }
 }

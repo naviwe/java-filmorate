@@ -20,8 +20,7 @@ public class GenresService {
     }
 
     public Genre getGenreById(int id) {
-        if (genresStorage.getAllGenres().stream().collect(Collectors.toMap(Genre::getId, x -> x)).containsKey(id)) {
-            return genresStorage.getGenreById(id);
-        } else throw new NotFoundException("Жанр с ID " + id + " не найден.");
+        return genresStorage.getGenreById(id);
     }
+
 }

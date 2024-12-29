@@ -24,11 +24,17 @@ public class GenreController {
 
     @GetMapping
     public List<Genre> getAllGenres() {
-        return genresService.getAllGenres();
+        log.info("Request received: GET /genres");
+        List<Genre> genres = genresService.getAllGenres();
+        log.info("Response: {} genres found", genres.size());
+        return genres;
     }
 
     @GetMapping("/{id}")
     public Genre getGenreById(@PathVariable long id) throws NotFoundException {
-        return genresService.getGenreById((int) id);
+        log.info("Request received: GET /genres/{}", id);
+        Genre genre = genresService.getGenreById((int) id);
+        log.info("Response: Genre found - {}", genre);
+        return genre;
     }
 }

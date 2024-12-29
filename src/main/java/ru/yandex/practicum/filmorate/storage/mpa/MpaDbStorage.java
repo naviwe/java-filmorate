@@ -22,9 +22,10 @@ public class MpaDbStorage implements MpaStorage {
 
     @Override
     public List<Mpa> getAllMpa() {
-        String sql = "SELECT FR.RATING_ID, FR.RATING FROM FILM_RATING fr ;";
+        String sql = "SELECT * FROM FILM_RATING;";
         return new ArrayList<>(jdbcTemplate.query(sql, (rs, rowNum) -> makeMpa(rs)));
     }
+
 
     @Override
     public Mpa getMpaById(int id) {

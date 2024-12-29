@@ -22,8 +22,7 @@ public class MpaService {
     }
 
     public Mpa getMpaById(int id) {
-        if (mpaStorage.getAllMpa().stream().collect(Collectors.toMap(Mpa::getId, m -> m)).containsKey(id)) {
-            return mpaStorage.getMpaById(id);
-        } else throw new NotFoundException("MPA с ID " + id + " не найден.");
+        return mpaStorage.getMpaById(id);
     }
+
 }
