@@ -4,15 +4,14 @@ import lombok.SneakyThrows;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 
 public interface UserStorage {
 
     long getSize();
 
-    User getById(Long id) throws UserNotFoundException;
-
-    Collection<User> findAll();
+    User getUserById(Long id) throws UserNotFoundException;
 
     User create(User user);
 
@@ -20,4 +19,13 @@ public interface UserStorage {
     void update(User user);
 
     void deleteById(Long id);
+
+    List<User> getUsersList();
+
+    Map<Long, User> getUsersMap();
+
+    List<User> getUserFriends(Long userId);
+
+    List<User> getCommonFriends(Long userId1, Long userId2);
+
 }

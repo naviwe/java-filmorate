@@ -15,7 +15,7 @@ public class UserValidationTest {
     @Test
     public void testUserValidation_validUser() {
         User user = new User();
-        user.setEmail("validemail@example.com");
+        user.setEmail("validemail@exampl.com");
         user.setLogin("validLogin");
         user.setName("John Doe");
         user.setBirthday(LocalDate.of(1990, 5, 15));

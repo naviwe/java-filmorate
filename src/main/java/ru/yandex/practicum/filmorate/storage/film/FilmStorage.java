@@ -2,7 +2,7 @@ package ru.yandex.practicum.filmorate.storage.film;
 
 import lombok.SneakyThrows;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.film.Film;
 
 import java.util.Collection;
 
@@ -21,4 +21,10 @@ public interface FilmStorage {
     void update(Film film);
 
     void deleteById(Long id);
+
+    void addLike(long filmId, long userId);
+
+    void removeLike(long filmId, long userId);
+
+    int getNumberOfLikes(Long filmId);
 }

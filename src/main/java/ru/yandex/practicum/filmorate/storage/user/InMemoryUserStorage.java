@@ -5,9 +5,9 @@ import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
 import ru.yandex.practicum.filmorate.model.User;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 @Component
 public class InMemoryUserStorage implements UserStorage {
@@ -20,15 +20,8 @@ public class InMemoryUserStorage implements UserStorage {
     }
 
     @Override
-    public User getById(Long id) throws UserNotFoundException {
-        User user = users.get(id);
-        if (user == null) throw new UserNotFoundException("Пользовартель с id: " + id + " не найден");
-        return users.get(id);
-    }
-
-    @Override
-    public Collection<User> findAll() {
-        return users.values();
+    public User getUserById(Long id) {
+        return getUsersMap().get(id);
     }
 
     @Override
@@ -50,5 +43,28 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public void deleteById(Long id) {
         users.remove(id);
+    }
+
+    @Override
+    public List<User> getUsersList() {
+        return new ArrayList<>(users.values());
+    }
+
+    @Override
+    public Map<Long, User> getUsersMap() {
+        return users;
+    }
+
+    @Override
+    public List<User> getUserFriends(Long userId) {
+        return getUsersList().stream().filter(x -> getUsersMap().get(userId).getFriends().contains(x.getId()))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<User> getCommonFriends(Long userId1, Long userId2) {
+        return getUsersList().stream().filter(x -> getUsersMap().get(userId1).getFriends()
+                .contains(x.getId())).filter(x -> getUsersMap().get(userId2).getFriends()
+                .contains(x.getId())).collect(Collectors.toList());
     }
 }

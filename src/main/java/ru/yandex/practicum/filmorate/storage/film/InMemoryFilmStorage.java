@@ -3,15 +3,15 @@ package ru.yandex.practicum.filmorate.storage.film;
 import lombok.SneakyThrows;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.film.Film;
 
-import java.util.Collection;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Long, Film> films = new ConcurrentHashMap<>();
+    private final Map<Long, Set<Long>> filmLikes = new ConcurrentHashMap<>();
     private static long nextId = 1L;
 
     @Override
@@ -36,6 +36,7 @@ public class InMemoryFilmStorage implements FilmStorage {
         film.setId(nextId);
         nextId++;
         films.put(film.getId(), film);
+        filmLikes.put(film.getId(), new HashSet<>());
         return film;
     }
 
@@ -49,5 +50,32 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public void deleteById(Long id) {
         films.remove(id);
+        filmLikes.remove(id);
+    }
+
+    @Override
+    public void addLike(long filmId, long userId) {
+        validateFilmExists(filmId);
+        filmLikes.computeIfAbsent(filmId, k -> new HashSet<>()).add(userId);
+    }
+
+    @Override
+    public void removeLike(long filmId, long userId) {
+        validateFilmExists(filmId);
+        Set<Long> likes = filmLikes.get(filmId);
+        if (likes != null) {
+            likes.remove(userId);
+        }
+    }
+
+    public int getNumberOfLikes(Long filmId) {
+        validateFilmExists(filmId);
+        return filmLikes.getOrDefault(filmId, Collections.emptySet()).size();
+    }
+
+    private void validateFilmExists(Long filmId) {
+        if (!films.containsKey(filmId)) {
+            throw new FilmNotFoundException("Фильм с ID " + filmId + " не найден.");
+        }
     }
 }

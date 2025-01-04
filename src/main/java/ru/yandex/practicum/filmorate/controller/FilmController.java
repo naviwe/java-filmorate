@@ -1,14 +1,12 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.lang.NonNull;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.FilmNotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.exception.UserNotFoundException;
-import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.film.Film;
 import ru.yandex.practicum.filmorate.service.film.FilmService;
 
 import java.util.*;
@@ -20,56 +18,50 @@ import java.util.*;
 public class FilmController {
     private final FilmService filmService;
 
-    @GetMapping()
+    @GetMapping
     public Collection<Film> findAll() {
-        log.info("findAll() method called to fetch all films");
+        log.info("Fetching all films...");
         return filmService.findAll();
     }
 
     @GetMapping("/{id}")
     public Film getFilm(@PathVariable Long id) {
-        try {
-            return filmService.getById(id);
-        } catch (FilmNotFoundException | UserNotFoundException e) {
-            throw e;
-        }
+        log.info("Fetching film with ID {}", id);
+        return filmService.getById(id);
     }
 
-    @PostMapping()
-    public Film create(@Valid @RequestBody @NonNull Film film) throws ValidationException {
-        film = filmService.create(film);
-        log.info("film created with id = {}, number of films = {}", film.getId(), filmService.getSize());
-        return film;
+    @PostMapping
+    @ResponseStatus(HttpStatus.CREATED)
+    public Film create(@Valid @RequestBody Film film) {
+        Film createdFilm = filmService.create(film);
+        log.info("Film created: {}", createdFilm);
+        return createdFilm;
     }
 
     @PutMapping
-    public Film update(@Valid @RequestBody @NonNull Film film) throws ValidationException {
-        filmService.update(film);
-        log.info("film with id {} updated", film.getId());
-        return film;
+    public Film update(@Valid @RequestBody Film film) {
+        Film updatedFilm = filmService.update(film);
+        log.info("Film updated: {}", updatedFilm);
+        return updatedFilm;
     }
 
     @PutMapping("/{id}/like/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void addLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
-        try {
-            filmService.likeFromUser(filmId, userId);
-        } catch (UserNotFoundException | FilmNotFoundException e) {
-            throw e;
-        }
+        log.info("Adding like for film ID {} from user ID {}", filmId, userId);
+        filmService.likeFromUser(filmId, userId);
     }
 
     @DeleteMapping("/{id}/like/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deleteLikeFromUser(@PathVariable("id") Long filmId, @PathVariable Long userId) {
-        try {
-            filmService.unlikeFromUser(filmId, userId);
-        } catch (UserNotFoundException | FilmNotFoundException e) {
-            throw e;
-        }
+        log.info("Removing like for film ID {} from user ID {}", filmId, userId);
+        filmService.unlikeFromUser(filmId, userId);
     }
 
     @GetMapping("/popular")
-    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") int count) {
+    public Collection<Film> getCountTop(@RequestParam(defaultValue = "10") @Min(1) int count) {
+        log.info("Fetching top {} popular films", count);
         return filmService.getCountTopFilms(count);
     }
-
 }
